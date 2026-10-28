@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RACER — Highway Rush</title>
+<style>
+:root{--cyan:#42f5e9;--pink:#ff3c8e;--yellow:#ffe66d;--ink:#080b16}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#1b2550 0%,#090d1c 52%,#05070e 100%);color:#f5f7ff;font-family:Inter,Segoe UI,Arial,sans-serif;display:flex;justify-content:center;align-items:center;padding:20px}
+.shell{width:min(1100px,100%);display:grid;grid-template-columns:1fr 270px;gap:18px}
+.game-card,.side-card{border:1px solid #303958;background:rgba(11,16,34,.88);border-radius:22px;box-shadow:0 20px 70px #0008;overflow:hidden}
+.topbar{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #252e4b;background:linear-gradient(90deg,#121a35,#0b1022)}
+.logo{font-weight:1000;letter-spacing:3px;font-size:20px}.logo span{color:var(--cyan)}.pill{font-size:11px;letter-spacing:1.5px;color:var(--cyan);border:1px solid #42f5e966;border-radius:30px;padding:7px 10px}
+.stage{position:relative;background:#090d18;line-height:0}
+canvas{width:100%;height:auto;display:block;max-height:70vh;object-fit:contain}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#080b1688,#080b16c9);padding:20px;text-align:center}
+.overlay.hidden{display:none}
+.modal{max-width:400px;line-height:1.45}.eyebrow{font-size:11px;letter-spacing:4px;color:var(--cyan);font-weight:800}.modal h1{font-size:clamp(32px,5vw,54px);line-height:.98;margin:12px 0;text-transform:uppercase;font-weight:1000;font-style:italic}.modal h1 span{color:var(--pink)}.modal p{color:#bdc7e2;line-height:1.6;font-size:14px}
+button{font:inherit;cursor:pointer;border:0;font-weight:900;letter-spacing:1px;text-transform:uppercase;transition:transform .15s,filter .15s}
+button:hover{transform:translateY(-2px);filter:brightness(1.12)}
+.primary{background:linear-gradient(100deg,var(--cyan),#8affce);color:#07121b;padding:14px 24px;border-radius:12px;box-shadow:0 8px 28px #42f5e933}
+.hud{display:flex;gap:12px;padding:14px 18px;background:#0b1021;border-top:1px solid #252e4b}
+.stat{flex:1;background:#111a32;border-radius:12px;padding:10px 12px;min-width:0}.stat small{display:block;color:#8d9abc;font-size:10px;letter-spacing:1.5px;margin-bottom:5px}.stat strong{font-size:21px;font-variant-numeric:tabular-nums}.stat .unit{font-size:10px;color:var(--cyan);margin-left:4px}
+.side-card{padding:22px;display:flex;flex-direction:column;gap:20px}.section-title{font-size:11px;letter-spacing:2px;color:#8493ba;font-weight:800;margin-bottom:12px}
+.best{font-size:36px;font-weight:1000;color:var(--yellow)}.best small{font-size:12px;color:#9da9c7;font-weight:500}
+.control{display:flex;align-items:center;gap:12px;margin:11px 0;color:#d9e0f7;font-size:13px}.key{min-width:35px;height:31px;display:grid;place-items:center;border:1px solid #485477;background:#171f3a;border-radius:7px;color:var(--cyan);font-weight:900}
+.tip{border:1px solid #303958;background:#10172c;border-radius:13px;padding:13px;color:#aab6d5;font-size:12px;line-height:1.55}.tip b{color:#f4f7ff}
+.mini-track{height:6px;background:#222c48;border-radius:8px;overflow:hidden;margin-top:10px}.mini-track div{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink));transition:width .2s}
+.mobile-controls{display:none;gap:12px;padding:0 18px 16px;background:#0b1021}.mobile-controls button{flex:1;padding:13px;border-radius:12px;background:#192342;color:var(--cyan);border:1px solid #3b4b72}
+.footer{padding:12px 18px;color:#657397;font-size:10px;display:flex;justify-content:space-between;gap:8px}
+@media(max-width:800px){.shell{grid-template-columns:1fr}.side-card{display:grid;grid-template-columns:1fr 1fr;gap:15px;padding:17px}.side-card .tip{grid-column:1/-1}.best{font-size:28px}.mobile-controls{display:flex}.topbar{padding:15px}.logo{font-size:17px}}
+@media(max-width:450px){body{padding:8px}.side-card{grid-template-columns:1fr 1fr}.hud{gap:7px;padding:9px}.stat{padding:9px 7px}.stat strong{font-size:17px}.stat small{font-size:9px}.pill{font-size:9px}.footer{font-size:9px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <main class="game-card">
+    <header class="topbar"><div class="logo">NEON<span>RACER</span></div><div class="pill">◆ HIGHWAY RUSH</div></header>
+    <div class="stage">
+      <canvas id="game" width="800" height="600" aria-label="Car racing game"></canvas>
+      <div class="overlay" id="overlay"><div class="modal">
+        <div class="eyebrow">READY, DRIVER?</div><h1>OWN THE<br><span>ROAD.</span></h1>
+        <p>Dodge traffic, collect distance, and push your top speed. How long can you survive the neon highway?</p>
+        <button class="primary" id="startBtn">▶ Start engine</button>
+        <p style="font-size:11px;margin-top:15px">Use ← → or A / D to steer · Space to pause</p>
+      </div></div>
+    </div>
+    <div class="hud">
+      <div class="stat"><small>SPEED</small><strong id="speed">0</strong><span class="unit">KM/H</span></div>
+      <div class="stat"><small>DISTANCE</small><strong id="distance">0</strong><span class="unit">M</span></div>
+      <div class="stat"><small>OVERTAKES</small><strong id="passes">0</strong></div>
+      <div class="stat"><small>RUN SCORE</small><strong id="score">0</strong></div>
+    </div>
+    <div class="mobile-controls"><button id="leftBtn">◀ LEFT</button><button id="rightBtn">RIGHT ▶</button></div>
+    <div class="footer"><span>NEON RACER / ARCADE EDITION</span><span>BUILT FOR SPEED ⚡</span></div>
+  </main>
+  <aside class="side-card">
+    <section><div class="section-title">PERSONAL BEST</div><div class="best" id="best">0 <small>PTS</small></div><div class="mini-track"><div id="progress"></div></div></section>
+    <section><div class="section-title">HOW TO DRIVE</div>
+      <div class="control"><span class="key">←</span><span class="key">→</span><span>Steer left / right</span></div>
+      <div class="control"><span class="key">A</span><span class="key">D</span><span>Alternative steering</span></div>
+      <div class="control"><span class="key">SPACE</span><span>Pause / resume</span></div>
+      <div class="control"><span class="key">R</span><span>Restart race</span></div>
+    </section>
+    <section><div class="section-title">RACE STRATEGY</div><div class="tip"><b>Keep your eyes ahead.</b><br>Traffic gets faster the longer you last. Change lanes early, avoid collisions, and build your score by overtaking cars.</div></section>
+    <section><div class="section-title">YOUR GARAGE</div><div class="tip">🚘 <b>Neon GT</b><br>Balanced handling · Turbo highway setup<br><span style="color:var(--cyan)">CLASS: STREET LEGEND</span></div></section>
+  </aside>
+</div>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=800,H=600, road={left:170,right:630};
+const $=id=>document.getElementById(id);
+let running=false,paused=false,gameOver=false,last=0,elapsed=0,spawn=0,roadOffset=0;
+let player={x:400,y:475,w:48,h:82,vx:0};
+let traffic=[],particles=[],distance=0,passes=0,speed=0,score=0,best=0,keys={};
+try{best=Number(localStorage.getItem('neonRacerBest')||0)}catch(e){}
+$('best').innerHTML=best+' <small>PTS</small>';
+const lanes=[255,352,449,546];
+function roundedRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}}
+function drawCar(x,y,w,h,color,playerCar=false){
+ ctx.save();ctx.translate(x,y);
+ // shadow and wheels
+ ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(2,h*.53,w*.65,h*.56,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#080a12';roundedRect(-w*.53,h*.18,w*.18,h*.25,5,'#090b12');roundedRect(w*.35,h*.18,w*.18,h*.25,5,'#090b12');
+ roundedRect(-w*.53,h*.61,w*.18,h*.25,5,'#090b12');roundedRect(w*.35,h*.61,w*.18,h*.25,5,'#090b12');
+ roundedRect(-w/2,-h/2,w,h,12,color,playerCar?'#a8fff8':'#ffffff40');
+ // bonnet and windshield
+ ctx.fillStyle=playerCar?'#a7fff7':'#ffffff22';ctx.beginPath();ctx.moveTo(-w*.35,-h*.25);ctx.lineTo(w*.35,-h*.25);ctx.lineTo(w*.29,-h*.02);ctx.lineTo(-w*.29,-h*.02);ctx.closePath();ctx.fill();
+ roundedRect(-w*.34,-h*.02,w*.68,h*.26,7,'#13283d','#7da2bf');
+ roundedRect(-w*.31,h*.31,w*.62,h*.13,5,playerCar?'#111d2b':'#171a29');
+ ctx.fillStyle=playerCar?'#eaffff':'#ff415f';roundedRect(-w*.39,-h*.46,w*.22,7,3,playerCar?'#f8ffff':'#ff6678');roundedRect(w*.17,-h*.46,w*.22,7,3,playerCar?'#f8ffff':'#ff6678');
+ if(playerCar){ctx.shadowColor='#42f5e9';ctx.shadowBlur=18;ctx.strokeStyle='#42f5e9';ctx.lineWidth=2;ctx.strokeRect(-w/2+2,-h/2+2,w-4,h-4)}
+ ctx.restore();
+}
+function drawBackground(dt){
+ const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#10172e');sky.addColorStop(1,'#080c18');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ // distant city
+ for(let i=0;i<28;i++){let x=i*31,y=100+(i*47%75),bw=15+(i*13%25),bh=70+(i*29%90);ctx.fillStyle=i%3===0?'#18284a':'#111a31';ctx.fillRect(x,y,bw,bh);for(let wy=y+10;wy<y+bh-5;wy+=14)for(let wx=x+4;wx<x+bw-3;wx+=9){ctx.fillStyle=(wx+wy+i)%3===0?'#42f5e988':'#ff3c8e55';ctx.fillRect(wx,wy,3,5)}}
+ ctx.fillStyle='#10172a';ctx.fillRect(road.left,0,road.right-road.left,H);
+ ctx.fillStyle='#27334c';ctx.fillRect(road.left-8,0,8,H);ctx.fillRect(road.right,0,8,H);
+ ctx.fillStyle='#42f5e9';ctx.fillRect(road.left-3,0,3,H);ctx.fillRect(road.right,0,3,H);
+ // lane markers
+ ctx.setLineDash([34,28]);ctx.lineDashOffset=-roadOffset;ctx.strokeStyle='#53617b';ctx.lineWidth=4;
+ for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(road.left+(road.right-road.left)*i/4,0);ctx.lineTo(road.left+(road.right-road.left)*i/4,H);ctx.stroke()}ctx.setLineDash([]);
+ // roadside neon dashes
+ for(let i=0;i<12;i++){let y=(i*72+roadOffset*1.8)%(H+50)-25;ctx.fillStyle=i%2?'#ff3c8e':'#42f5e9';ctx.fillRect(road.left-30,y,9,24);ctx.fillRect(road.right+21,y,9,24)}
+}
+function draw(){
+ drawBackground();
+ // speed streaks
+ if(running&&!paused&&!gameOver&&speed>140){ctx.strokeStyle='#9cefff22';ctx.lineWidth=2;for(let i=0;i<12;i++){let x=(i*73+elapsed*111)%W,y=(i*97+elapsed*239)%H;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+18+speed/25);ctx.stroke()}}
+ traffic.forEach(c=>drawCar(c.x,c.y,c.w,c.h,c.color,false));
+ particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/35);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,4,4);ctx.globalAlpha=1});
+ if(!gameOver)drawCar(player.x,player.y,player.w,player.h,'#14c9c2',true);
+ // subtle vignette
+ const v=ctx.createRadialGradient(400,300,180,400,300,470);v.addColorStop(0,'#0000');v.addColorStop(1,'#02040b99');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+ if(paused&&running&&!gameOver){ctx.fillStyle='#050817b8';ctx.fillRect(0,0,W,H);ctx.fillStyle='#42f5e9';ctx.font='900 44px Arial';ctx.textAlign='center';ctx.fillText('PAUSED',400,290);ctx.fillStyle='#dbe5ff';ctx.font='16px Arial';ctx.fillText('Press SPACE to continue',400,325)}
+ if(gameOver){ctx.fillStyle='#060918bb';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#ff3c8e';ctx.font='1000 48px Arial';ctx.fillText('CRASH!',400,250);ctx.fillStyle='#fff';ctx.font='bold 22px Arial';ctx.fillText('SCORE  '+score,400,294);ctx.fillStyle='#b5c4e7';ctx.font='16px Arial';ctx.fillText('Distance: '+Math.floor(distance)+' m  ·  Overtakes: '+passes,400,325)}
+}
+function reset(){
+ player={x:400,y:475,w:48,h:82,vx:0};traffic=[];particles=[];distance=0;passes=0;speed=0;score=0;elapsed=0;spawn=0;roadOffset=0;gameOver=false;paused=false;running=true;$('overlay').classList.add('hidden');updateHud();
+}
+function spawnCar(){
+ const lane=lanes[Math.floor(Math.random()*lanes.length)];
+ const colors=['#ff3c8e','#ffb13b','#7d78ff','#e9efff','#5de17b','#f36b52'];
+ traffic.push({x:lane,y:-100,w:43+Math.random()*7,h:72+Math.random()*12,color:colors[Math.floor(Math.random()*colors.length)],v:1.6+Math.random()*1.5,passed:false});
+}
+function burst(x,y){for(let i=0;i<30;i++)particles.push({x,y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:20+Math.random()*20,color:['#42f5e9','#ff3c8e','#ffe66d'][i%3]})}
+function update(dt){
+ if(!running||paused||gameOver)return;
+ elapsed+=dt/1000;speed=Math.min(320,150+elapsed*2.2);const factor=dt/16.67;
+ roadOffset=(roadOffset+speed*.13*factor)%62;
+ if(keys.ArrowLeft||keys.a||keys.A)player.x-=6.5*factor;
+ if(keys.ArrowRight||keys.d||keys.D)player.x+=6.5*factor;
+ player.x=Math.max(road.left+35,Math.min(road.right-35,player.x));
+ spawn+=dt;if(spawn>Math.max(390,1050-elapsed*7)){spawnCar();spawn=0}
+ for(let i=traffic.length-1;i>=0;i--){const c=traffic[i];c.y+=(c.v+speed/105)*factor;
+ if(!c.passed&&c.y>player.y+player.h/2){c.passed=true;passes++;score+=100}
+ const dx=Math.abs(c.x-player.x),dy=Math.abs(c.y-player.y);
+ if(dx<(c.w+player.w)*.39&&dy<(c.h+player.h)*.39){burst(player.x,player.y);gameOver=true;running=false;score=Math.floor(distance/2)+passes*100;if(score>best){best=score;try{localStorage.setItem('neonRacerBest',best)}catch(e){}$('best').innerHTML=best+' <small>PTS</small>'}break}
+ if(c.y>H+100)traffic.splice(i,1);
+ }
+ particles.forEach(p=>{p.x+=p.vx*factor;p.y+=p.vy*factor;p.life-=factor});particles=particles.filter(p=>p.life>0);
+ distance+=speed*dt/36000;score=Math.floor(distance/2)+passes*100;
+ updateHud();
+}
+function updateHud(){$('speed').textContent=Math.floor(speed);$('distance').textContent=Math.floor(distance);$('passes').textContent=passes;$('score').textContent=score;$('progress').style.width=(best?Math.min(100,score/best*100):0)+'%'}
+function frame(t){const dt=Math.min(40,t-(last||t));last=t;update(dt);draw();requestAnimationFrame(frame)}
+$('startBtn').addEventListener('click',reset);
+window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key]=true;if(e.key===' '&&running&&!gameOver)paused=!paused;if((e.key==='r'||e.key==='R')&&(gameOver||!running))reset();if(e.key==='Enter'&&(!running||gameOver))reset()});
+window.addEventListener('keyup',e=>keys[e.key]=false);
+function holdButton(id,key){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();keys[key]=true});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[key]=false))}
+holdButton('leftBtn','ArrowLeft');holdButton('rightBtn','ArrowRight');
+draw();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
